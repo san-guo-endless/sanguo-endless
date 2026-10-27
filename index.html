@@ -129,6 +129,50 @@ body {
   .lv-fx-title { font-size: 32px; letter-spacing: 6px; }
 }
 
+/* ---------- 致谢 ---------- */
+.cr-author { text-align: center; padding: 10px 0 14px; }
+.cr-role { font-size: 11px; color: var(--dim); letter-spacing: 2px; }
+.cr-name {
+  font-size: 26px; font-weight: bold; color: var(--gold);
+  letter-spacing: 4px; margin-top: 4px;
+  text-shadow: 0 0 18px #e6c07b66;
+}
+.cr-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  background: #ffffff06; margin-bottom: 6px;
+}
+.cr-row b { font-size: 14px; color: #fff; flex: none; }
+.cr-row span { font-size: 11px; color: var(--dim); }
+
+/* 次要署名：程序编写（比作者名暗一档，但依然好认） */
+.cr-sub {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  padding: 8px 0 12px;
+}
+.cr-sub-role { font-size: 11px; color: var(--dim); letter-spacing: 2px; }
+.cr-sub-id { font-size: 15px; color: #c8cee0; letter-spacing: 1px; }
+
+.cr-extra {
+  margin-top: 10px; text-align: center;
+  font-size: 11.5px; color: #8f96b0; font-style: italic;
+}
+.cr-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.cr-chip {
+  font-size: 12px; padding: 5px 10px; border-radius: 20px;
+  background: #e6c07b12; border: 1px solid #e6c07b33; color: var(--gold);
+}
+.cr-empty {
+  font-size: 12px; color: var(--dim); text-align: center;
+  padding: 14px 0; border: 1px dashed #ffffff1a; border-radius: 8px;
+}
+.cr-foot {
+  margin-top: 16px; padding: 10px 12px; border-radius: 10px;
+  background: #ffffff06; border: 1px solid var(--line);
+  font-size: 12px; line-height: 1.9; color: #c8cee0; text-align: center;
+}
+.cr-tip { margin-top: 8px; font-size: 11px; color: var(--dim); text-align: center; }
+
 /* ---------- 成就列表 ---------- */
 .ach-list { max-height: 52vh; overflow-y: auto; margin-top: 4px; padding-right: 2px; }
 .ach-row {
@@ -334,7 +378,7 @@ main { max-width: 880px; width: 100%; margin: 0 auto; padding: 0 16px; }
 /* ---------- 出击条 ---------- */
 .attack-bar {
   display: flex; flex-direction: column; align-items: center;
-  gap: 10px; margin: 16px 0 6px;
+  gap: 10px; margin: 14px 0 4px;
 }
 .attack-bar .btn { margin-left: 0; min-width: 260px; max-width: 100%; }
 .btn-row .btn { margin-left: 0; }
@@ -1314,12 +1358,12 @@ body.battling .enemy {
   </div>
   <div class="slot-rows" id="slotRow"></div>
 
-  <div class="battle-log" id="battleLog"></div>
-
   <div class="attack-bar">
     <div class="atk-preview" id="atkPreview"></div>
     <button class="btn" id="btnAttack">出 击</button>
   </div>
+
+  <div class="battle-log" id="battleLog"></div>
 
   <div class="row-label">牌库</div>
   <div class="hand-row" id="handRow"></div>
@@ -1351,7 +1395,7 @@ body.battling .enemy {
    —— 调数值只需要改这个文件，不用碰 game.js
    ========================================================= */
 
-const GAME_VERSION = 'v1.0';
+const GAME_VERSION = 'v1.0.1';
 
 const CONFIG = {
   // ---------- 敌人 ----------
@@ -1842,18 +1886,36 @@ const LEVEL_TITLES = [
 ];
 
 /* =========================================================
+   致谢名单（手动维护）
+   ========================================================= */
+const CREDITS = {
+  author: { id: '羊染冷', role: '制作 · 设计 · 数值' },
+  programmer: { id: 'deepseekV4.flash', role: '程序编写' },
+  testers: [
+    { id: '怪咖', note: '首席测试官 · 吴国 600 万 / 魏国 30 波实测' },
+  ],
+  players: [
+    'Bestlife', 'Henley', '赫剑冰', 'In.', '赠耀',
+    'Zesuyn.S', 'Quartzcrystal', 'Rt△ ABC', 'Deiphobe',
+  ],
+  extra: '制作人的妈和弟也参与了内测（doge）',
+  note: '感谢所有参与内测的玩家！' +
+        '<br>也感谢所有帮助这个游戏不断优化的入们！',
+};
+
+/* =========================================================
    测试日志：首席测试官战绩（手动维护，版本号必须标）
    ========================================================= */
 const HALL_OF_FAME = {
-  name: '林',
-  team: ['林', '同学'],        // 首席测试官不止一位
+  name: '怪咖',
+  team: ['怪咖'],
   rows: [
     { build: '许褚流', camp: 'wei', dmg: 9000000, wave: 73, ver: 'v0.34', old: '削弱前',
       note: '国一许褚 · 单刀百万' },
     { build: '吴国流', camp: 'wu', dmg: 6000000, wave: 65, ver: 'v0.52', old: '',
       note: '上限很高，但要很会玩 · 小概率 + 极高理解（段数堆到 3,600，还要靠运气错过神机营）' },
     { build: '混色流', camp: 'mix', dmg: 750000, waveText: '波数待补', ver: 'v0.46', old: '',
-      note: '首席测试官·林 · 三国混编 75 万，把混色流上限从 20 万拉到 75 万' },
+      note: '首席测试官·怪咖 · 三国混编 75 万，把混色流上限从 20 万拉到 75 万' },
     { build: '蜀国流', camp: 'shu', dmg: 280000, wave: 56, ver: 'v0.36', old: '',
       note: '蜀国主体，混色辅助' },
     { build: '混色流', camp: 'mix', dmgText: '20 多万', wave: 56, ver: 'v0.41', old: '',
@@ -1869,6 +1931,13 @@ const HALL_OF_FAME = {
    更新日志（从新到旧）
    ========================================================= */
 const CHANGELOG = [
+  { v: 'v1.0.1', title: '出击按钮上移 + 新增「致谢」页', items: [
+    '【修复】战斗过程中<b>够不到「跳过」按钮</b> —— 战报（伤害明细）会把出击按钮往下挤，手机上得滑下去才能点',
+    '现在「出击」在<b>战报上方</b>，战报往下长，按钮位置不动',
+    '另外战报自动滚动改成<b>只滚自己那一块</b>，不再把整个页面往下拽 —— 这也是按钮"跑掉"的原因',
+    '【新增】日志弹窗多了 <b>🙏 致谢</b> 一栏：制作 · 设计 · 数值 / 程序编写 / 首席测试官 / <b>9 位内测玩家</b>',
+    '纯布局 + 名单改动，不影响任何数值 / 存档',
+  ]},
   { v: 'v1.0', title: '正式版上线 🎉', items: [
     '【发布】从 <b>v0.1 到 v1.0 —— 59 个版本</b>。这个游戏现在有自己的网址了',
     '一款<b>纯前端、零依赖、完全离线</b>的三国题材肉鸽卡牌游戏：<b>伤害 = (攻击 − 护甲) × 连击</b>，而<b>位置决定一切</b>',
@@ -1955,7 +2024,7 @@ const CHANGELOG = [
     '浏览器为了让人看到"整张页面"，就会<b>自动缩小</b> —— 于是顶栏看起来占满整宽，而<b>下面的游戏区只剩一半</b>',
     '现在顶栏会<b>自动换行</b>，永远不会超过屏幕宽度；小屏上还会收窄间距、隐藏标题（游戏名在开始界面已经有了）',
     '顺手把手机端左右留白从 16px 收到 10px，<b>内容再宽一点</b>',
-    '【测试日志】新增 <b>混色流 75 万</b>（首席测试官·林），把混色流上限从 20 万拉到 75 万',
+    '【测试日志】新增 <b>混色流 75 万</b>（首席测试官·怪咖），把混色流上限从 20 万拉到 75 万',
   ]},
   { v: 'v0.47', title: '致命修复：演武场不再吃掉主线存档', items: [
     '【修复】进<b>演武场</b>会把主线存档删掉 —— 回开始界面后「继续上次」消失，等于辛苦打到 50 波白打',
@@ -4235,9 +4304,11 @@ function triggerKillFx() {
 function newRowsScroll(box) {
   const rows = box.querySelectorAll('.log-row');
   const last = rows[rows.length - 1];
-  if (last && last.scrollIntoView) {
-    try { last.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
-  }
+  if (!last) return;
+  /* 只滚"战报容器自己"，不要用 scrollIntoView ——
+     否则战报在屏幕外时会把【整个页面】往下拽，
+     出击/跳过按钮（在战报上方）就被拖出视野了。*/
+  try { box.scrollTop = box.scrollHeight; } catch (e) {}
 }
 
 function waveGold(wave, isBoss) {
@@ -5956,19 +6027,75 @@ function openChangelog(done) {
   renderLog();
 }
 
+/* ---------- 致谢 ---------- */
+function creditsHTML() {
+  const c = CREDITS || {};
+  let html = '<div class="hof-head">🙏 致 谢' +
+    '<span>没有这些人，这个游戏走不到 v1.0</span></div>';
+
+  /* 主角：制作 / 设计 / 数值 */
+  const a = c.author || {};
+  html += '<div class="cr-author">' +
+    '<div class="cr-role">' + (a.role || '制作') + '</div>' +
+    '<div class="cr-name">' + (a.id || '—') + '</div>' +
+    '</div>';
+
+  /* 次要：程序编写 */
+  const p = c.programmer || {};
+  if (p.id) {
+    html += '<div class="cr-sub">' +
+      '<span class="cr-sub-role">' + (p.role || '程序编写') + '</span>' +
+      '<b class="cr-sub-id">' + p.id + '</b>' +
+      '</div>';
+  }
+
+  /* 首席测试官 */
+  if (c.testers && c.testers.length) {
+    html += '<div class="codex-group">首 席 测 试 官</div>';
+    c.testers.forEach(t => {
+      html += '<div class="cr-row"><b>' + t.id + '</b>' +
+        '<span>' + (t.note || '') + '</span></div>';
+    });
+  }
+
+  /* 内测玩家 */
+  if (c.players && c.players.length) {
+    html += '<div class="codex-group">内 测 玩 家（' + c.players.length + ' 位）</div>';
+    html += '<div class="cr-grid">' +
+      c.players.map(x => '<span class="cr-chip">' + x + '</span>').join('') +
+      '</div>';
+  }
+
+  /* 彩蛋备注 */
+  if (c.extra) html += '<div class="cr-extra">※ ' + c.extra + '</div>';
+
+  /* 收尾 */
+  if (c.note) html += '<div class="cr-foot">' + c.note + '</div>';
+  return html;
+}
+
 function setLogTab(t) {
-  _logTab = (t === 'tester') ? 'tester' : 'update';
+  _logTab = (t === 'tester' || t === 'credits') ? t : 'update';
   renderLog();
 }
 
 function renderLog() {
-  const up = (_logTab !== 'tester');
+  const t = _logTab || 'update';
+  const tabBtn = (id, label) =>
+    '<button class="log-tab' + (t === id ? ' on' : '') +
+    '" onclick="setLogTab(\'' + id + '\')">' + label + '</button>';
+
   let html = '<h2>日 志</h2>' +
     '<div class="log-tabs">' +
-      '<button class="log-tab' + (up ? ' on' : '') + '" onclick="setLogTab(\'update\')">更新日志</button>' +
-      '<button class="log-tab' + (up ? '' : ' on') + '" onclick="setLogTab(\'tester\')">测试日志</button>' +
+      tabBtn('update', '更新日志') +
+      tabBtn('tester', '测试日志') +
+      tabBtn('credits', '致谢') +
     '</div>';
-  html += up ? changelogHTML() : testerLogHTML();
+
+  html += (t === 'tester') ? testerLogHTML()
+        : (t === 'credits') ? creditsHTML()
+        : changelogHTML();
+
   html += '<div class="btn-row"><button class="btn" onclick="closeChangelog()">' +
     (_changelogDone ? '知道了' : '关闭') + '</button></div>';
   openModal(html);
@@ -6010,7 +6137,7 @@ function testerLogHTML() {
   const hf = HALL_OF_FAME;
   const team = (hf.team && hf.team.length) ? hf.team.join(' · ') : hf.name;
   let html = '<div class="hof-head">🏅 首席测试官 · ' + team +
-    '<span>每个流派都有人亲手打到底 —— 本作的平衡数据，大半出自他们之手</span></div>';
+    '<span>每个流派他都亲手打到底 —— 本作的平衡数据，大半出自他手</span></div>';
 
   html += '<div class="hof-list">';
   hf.rows.forEach(r => {
