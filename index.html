@@ -459,6 +459,8 @@ main { max-width: 880px; width: 100%; margin: 0 auto; padding: 0 16px; }
 .shop-item .info b { color: #c9a8e8; font-size: 13px; }
 .shop-item .info span { display: block; font-size: 11px; color: var(--dim); margin-top: 3px; }
 .shop-item .price { color: var(--gold); font-size: 14px; }
+.cr-why { font-size: 11px; color: #d9534f; }
+.cr-left { font-size: 11px; color: #7ee07e; }
 .shop-item button {
   padding: 5px 14px; font-size: 12px; border-radius: 5px; cursor: pointer;
   border: 1px solid #6a5a2a; background: #3a3018; color: var(--gold); font-family: inherit;
@@ -1395,7 +1397,7 @@ body.battling .enemy {
    —— 调数值只需要改这个文件，不用碰 game.js
    ========================================================= */
 
-const GAME_VERSION = 'v1.0.1';
+const GAME_VERSION = 'v1.0.3';
 
 const CONFIG = {
   // ---------- 敌人 ----------
@@ -1931,6 +1933,18 @@ const HALL_OF_FAME = {
    更新日志（从新到旧）
    ========================================================= */
 const CHANGELOG = [
+  { v: 'v1.0.3', title: '招募：武将 3 次 · 武器 3 次，并写清剩余次数', items: [
+    '【调整】招募额度改成 <b>武将 3 次 + 武器 3 次</b>（随机武将和指定阵营<b>共用</b>武将那 3 次）',
+    '以前是三项合计只有 3 次，玩家前 3 个商店就用光了，后面全是灰按钮还不知道为什么',
+    '现在每一行旁边都写着 <b>「还剩 2」</b>（绿色）/「已用完」/「金币不足」（红色），不会再出现"没有解释的灰按钮"',
+    '【修复】招募次数原来没进存档 —— 刷新页面「继续上次」会白嫖额度，已修',
+  ]},
+  { v: 'v1.0.2', title: '招募按钮为什么按不了，现在会写清楚了', items: [
+    '【修复】商店「招募」的按钮变灰时<b>没有任何提示</b>，玩家以为钱够就该能买 —— 其实多半是<b>整局 3 次已经用完了</b>',
+    '现在：标题用<b>红色</b>显示「本局还剩 0 / 3 次 · 本局已用完，下一局再来」，价格旁边也会写「次数已用完」或「金币不足」',
+    '【修复】招募次数原来没有存进存档 —— 刷新页面「继续上次」会白嫖 3 次。现在会跟着存档走',
+    '⚠ 招募是<b>整局 3 次</b>（武将 + 武器合计），不是每次商店 3 次',
+  ]},
   { v: 'v1.0.1', title: '出击按钮上移 + 新增「致谢」页', items: [
     '【修复】战斗过程中<b>够不到「跳过」按钮</b> —— 战报（伤害明细）会把出击按钮往下挤，手机上得滑下去才能点',
     '现在「出击」在<b>战报上方</b>，战报往下长，按钮位置不动',
@@ -2317,7 +2331,8 @@ const S = {
   retryCount: 0,  // 本局已重排次数
   runDmg: 0,      // 本局累计总伤（含溢出）→ 成就「单局总伤」
   runBestHit: 0,  // 本局最高「单波总伤害」→ 战功来源
-  recruits: 0,    // 本局已招募次数（商店买武将/武器，整局限次）
+  recHero: 0,     // 本局已招募：武将（随机 + 指定阵营共用，共 3 次）
+  recWeapon: 0,   // 本局已招募：武器（单独 3 次）
   expAwarded: 0,  // 本局已结算进战功的部分（防重排重复计入）
   rwd: { noHero: 0, recent: [] },  // 防脸黑：连续没出武将 / 最近拿到的英雄
   slots: [],      // heroUid | null
@@ -2444,7 +2459,8 @@ function startRun() {
   S.retryCount = 0;
   S.runDmg = 0;
   S.runBestHit = 0;
-  S.recruits = 0;
+  S.recHero = 0;
+  S.recWeapon = 0;
   S.expAwarded = 0;
   S.rwd = { noHero: 0, recent: [] };
   S.phase = 'prep';
@@ -4855,27 +4871,35 @@ function renderShop() {
     });
   }
 
-  /* —— 招募（偶尔救急，整局限次）—— */
-  const left = recruitLeft();
-  const canR = left > 0;
-  html += '<div class="codex-group" style="margin-top:2px">招 募（本局还剩 ' + left + ' / ' +
-    (CONFIG.recruitMax || 0) + ' 次）</div>';
-
+  /* —— 招募（偶尔救急：三项各自限次）—— */
   const hc = CONFIG.recruitHeroCost, cc2 = CONFIG.recruitCampCost, wc = CONFIG.recruitWeaponCost;
+  const hLeft = recruitLeft('hero'), cLeft = hLeft, wLeft = recruitLeft('weapon');
+  const rmax = CONFIG.recruitMax || 0;
 
-  html += '<div class="shop-item' + (canR ? '' : '') + '">' +
+  html += '<div class="codex-group" style="margin-top:2px">招 募（武将 ' + rmax +
+    ' 次 · 武器 ' + rmax + ' 次）</div>';
+
+  /* 按不下去时把原因写在价格旁边（不要再给一个没有解释的灰按钮） */
+  const tagFor = (n, cost) => {
+    if (n <= 0) return '<span class="cr-why">已用完</span>';
+    if (S.gold < cost) return '<span class="cr-why">金币不足</span>';
+    return '<span class="cr-left">还剩 ' + n + '</span>';
+  };
+  const okFor = (n, cost) => (n > 0 && S.gold >= cost);
+
+  html += '<div class="shop-item">' +
     '<div class="info"><b>🎲 随机武将</b>' +
     '<span>任意阵营 · 抽到已有的同名会自动升星</span></div>' +
-    '<div class="price">' + hc + ' 金</div>' +
-    '<button ' + (canR && S.gold >= hc ? '' : 'disabled') +
+    '<div class="price">' + hc + ' 金 ' + tagFor(hLeft, hc) + '</div>' +
+    '<button ' + (okFor(hLeft, hc) ? '' : 'disabled') +
     ' onclick="buyRecruitHero(\'\')">招募</button></div>';
 
   html += '<div class="shop-item">' +
     '<div class="info"><b>🎲 指定阵营</b>' +
     '<span>从你选的阵营里抽一个</span></div>' +
-    '<div class="price">' + cc2 + ' 金</div>' +
+    '<div class="price">' + cc2 + ' 金 ' + tagFor(cLeft, cc2) + '</div>' +
     ['shu', 'wei', 'wu'].map(cp =>
-      '<button class="mini" ' + (canR && S.gold >= cc2 ? '' : 'disabled') +
+      '<button class="mini" ' + (okFor(cLeft, cc2) ? '' : 'disabled') +
       ' onclick="buyRecruitHero(\'' + cp + '\')">' +
       (CAMPS[cp] ? CAMPS[cp].name : cp) + '</button>').join('') +
     '</div>';
@@ -4883,8 +4907,8 @@ function renderShop() {
   html += '<div class="shop-item">' +
     '<div class="info"><b>🗡 随机武器</b>' +
     '<span>只从你场上有的兵种里抽</span></div>' +
-    '<div class="price">' + wc + ' 金</div>' +
-    '<button ' + (canR && S.gold >= wc ? '' : 'disabled') +
+    '<div class="price">' + wc + ' 金 ' + tagFor(wLeft, wc) + '</div>' +
+    '<button ' + (okFor(wLeft, wc) ? '' : 'disabled') +
     ' onclick="buyRecruitWeapon()">招募</button></div>';
 
   /* —— 金币突破（后期出口）—— */
@@ -4933,8 +4957,9 @@ function buyCommand(id) {
 }
 
 /* ---------- 商店招募（偶尔救急：整局最多 CONFIG.recruitMax 次） ---------- */
-function recruitLeft() {
-  return Math.max(0, (CONFIG.recruitMax || 0) - (S.recruits || 0));
+function recruitLeft(kind) {
+  const used = (kind === 'weapon') ? (S.recWeapon || 0) : (S.recHero || 0);
+  return Math.max(0, (CONFIG.recruitMax || 0) - used);
 }
 
 function recruitHeroPool(camp) {
@@ -4954,7 +4979,7 @@ function recruitWeaponPool() {
 }
 
 function buyRecruitHero(camp) {
-  if (recruitLeft() <= 0) { toast('本局招募次数已用完'); return; }
+  if (recruitLeft('hero') <= 0) { toast('武将招募本局已用完（限 ' + (CONFIG.recruitMax || 0) + ' 次）'); return; }
   const cost = camp ? CONFIG.recruitCampCost : CONFIG.recruitHeroCost;
   if (S.gold < cost) { toast('金币不足'); return; }
   const pool = recruitHeroPool(camp);
@@ -4962,7 +4987,7 @@ function buyRecruitHero(camp) {
 
   const def = pick(pool);
   S.gold -= cost;
-  S.recruits = (S.recruits || 0) + 1;
+  S.recHero = (S.recHero || 0) + 1;   /* 随机 / 指定阵营 共用这一个计数器 */
   S.heroes.push(makeHero(def.id, 1));
   if (!S.rwd) S.rwd = { noHero: 0, recent: [] };
   S.rwd.noHero = 0;
@@ -4976,7 +5001,7 @@ function buyRecruitHero(camp) {
 }
 
 function buyRecruitWeapon() {
-  if (recruitLeft() <= 0) { toast('本局招募次数已用完'); return; }
+  if (recruitLeft('weapon') <= 0) { toast('武器招募本局已用完（限 ' + (CONFIG.recruitMax || 0) + ' 次）'); return; }
   const cost = CONFIG.recruitWeaponCost;
   if (S.gold < cost) { toast('金币不足'); return; }
   const pool = recruitWeaponPool();
@@ -4984,7 +5009,7 @@ function buyRecruitWeapon() {
 
   const def = pick(pool);
   S.gold -= cost;
-  S.recruits = (S.recruits || 0) + 1;
+  S.recWeapon = (S.recWeapon || 0) + 1;
   S.weapons.push(makeWeapon(def.id));
   SFX.coin();
   toast('招募到武器：' + def.name);
@@ -5432,6 +5457,8 @@ function saveGame() {
       enemy: S.enemy,
       runDmg: S.runDmg,      // 中途刷新后接着玩，本局总伤不会丢
       runBestHit: S.runBestHit,
+      recHero: S.recHero,
+      recWeapon: S.recWeapon,
     }));
   } catch (e) {}
 }
@@ -5455,6 +5482,8 @@ function loadGame() {
     S.enemy = d.enemy || null;
     S.runDmg = d.runDmg || 0;
     S.runBestHit = d.runBestHit || 0;
+    S.recHero = d.recHero || 0;
+    S.recWeapon = d.recWeapon || 0;
     S.expAwarded = 0;          // 存档是在结算前写的，所以这局还没领过战功
     S.phase = 'prep';
     return true;
@@ -6551,7 +6580,8 @@ function startSandbox() {
   S.retryCount = 0;
   S.runDmg = 0;
   S.runBestHit = 0;
-  S.recruits = 0;
+  S.recHero = 0;
+  S.recWeapon = 0;
   S.expAwarded = 0;
   S.rwd = { noHero: 0, recent: [] };
   S.overflowPaid = 0;
