@@ -1425,10 +1425,10 @@ body.battling .enemy {
    —— 调数值只需要改这个文件，不用碰 game.js
    ========================================================= */
 
-const GAME_VERSION = 'v1.0.4';
+const GAME_VERSION = 'v1.0.6';
 
 /* 哪些版本"一进游戏就自动弹更新日志"（重大改动时用，弹一次就靠 sg_seen_ver 记住） */
-const CHANGELOG_AUTO_OPEN = ['v1.0.4'];
+const CHANGELOG_AUTO_OPEN = [];
 
 const CONFIG = {
   // ---------- 敌人 ----------
@@ -1964,6 +1964,19 @@ const HALL_OF_FAME = {
    更新日志（从新到旧）
    ========================================================= */
 const CHANGELOG = [
+  { v: 'v1.0.6', title: '打不过就重开？战功不会再白丢', items: [
+    '【修复】不少人<b>一看打不过就直接重开</b>，绕过了战败结算 —— 这一局的战功<b>一分都没加上</b>，自己还不知道',
+    '现在<b>只要开新的一局，上一局会自动结算</b>：能打到第几波，战功就记到第几波',
+    '开局后会提示「<b>上一局战功已结算 +N</b>」；如果因此升级，会显示新称号',
+    '【修复】战败后花金币<b>重排再战</b>的人，「已领战功」没写进存档，刷新页面「继续上次」可能<b>重复领一次</b>，已修',
+    '【修复】在开始界面（刷新过页面）点「开始游戏」，上一局的战功会丢 —— 现在会先从存档取回来再结算',
+    '【修复·重要】<b>演武场打的木桩伤害会被算进战功</b> —— 在演武场试完伤、点「返回」再开新局，木桩那几百万伤害被当成战功发了。已修：木桩的数字现在<b>完全不出演武场</b>',
+  ]},
+  { v: 'v1.0.5', title: '出招时页面不再乱跳', items: [
+    '【修复】牌多的时候<b>点不到「跳过」</b> —— 每次出招游戏都会把页面往下滚一次，把按钮顶出了屏幕',
+    '现在出招只做<b>行内横向滚动</b>（看得到同一排谁在出手），<b>页面完全不动</b>',
+    '顶部血条仍然吸附 —— 敌人血量、伤害数字、战报都照常显示',
+  ]},
   { v: 'v1.0.4', hot: true, title: '卡牌可以插队了 + 青龙偃月刀归关羽', items: [
     '【新增】<b>卡牌可以插队了</b>：点一张牌，再点你想放的位置，它就<b>插到那里</b>，后面的人各往后挪一格',
     '以前点两张是"互换"，会把被点的那张扔到末位 —— 末位有 ×2 加成，等于你没想动的人被塞进了最有利的位置',
@@ -2487,6 +2500,9 @@ function genEnemy(wave) {
 /* ---------------- 开局 ---------------- */
 
 function startRun() {
+  /* 上一局如果没走到"战败"（"一看打不过就返回重开"非常常见），先把它的战功结算掉。
+     awardRunExp 只补"增量"，重复调用是安全的（已经领过的不会再领）。 */
+  try { awardRunExp(); } catch (e) {}
   S.mode = 'normal';
   S.wave = 1;
   S.gold = CONFIG.startGold;
@@ -4056,11 +4072,14 @@ function flyDot(fromEl, toEl, color) {
   });
 }
 
-/* 滚动到卡牌，但要避开顶栏和敌人面板（它们战斗时是固定的） */
+/* 滚动到卡牌：**只做行内横向滚动**。
+   ⚠ 千万不要做"页面纵向滚动" —— 出招时页面会一直往下跳，
+     把「出击 / 跳过」按钮顶出屏幕（玩家反馈：牌一多就点不到跳过）。
+   纵向靠 .enemy 的 sticky 吸附就够了，信息一点没少：
+     敌人面板粘在顶部 + 战报里每张牌都有名字和伤害。*/
 function scrollCardIntoView(el) {
   if (!el) return;
   try {
-    // 1) 行内横向滚动
     const row = el.closest ? el.closest('.slot-row') : null;
     if (row && row.scrollWidth > row.clientWidth + 2) {
       const rr = row.getBoundingClientRect();
@@ -4068,17 +4087,6 @@ function scrollCardIntoView(el) {
       if (cr.left < rr.left + 4 || cr.right > rr.right - 4) {
         row.scrollTo({ left: row.scrollLeft + (cr.left - rr.left) - 12, behavior: 'smooth' });
       }
-    }
-
-    // 2) 页面纵向滚动（避开顶栏 + 敌人面板）
-    const tb = document.querySelector('.topbar');
-    const en = document.querySelector('.enemy');
-    const offset = (tb ? tb.offsetHeight : 0) + (en ? en.offsetHeight : 0) + 24;
-    const r = el.getBoundingClientRect();
-    const vh = window.innerHeight;
-    if (r.top < offset || r.bottom > vh - 16) {
-      const y = window.scrollY + r.top - offset - 8;
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     }
   } catch (e) {}
 }
@@ -4276,8 +4284,10 @@ async function attack() {
 
   /* 本局最高「单波总伤害」→ 战功来源。
      ⚠ 注意口径：这里记的是"一次出招打出的总伤害"（acc），
-     和面板上「最高单波」是同一个数 —— 之前错记成"单张牌最高"，所以战功看起来只有一半。*/
-  if (acc > (S.runBestHit || 0)) S.runBestHit = acc;
+     和面板上「最高单波」是同一个数 —— 之前错记成"单张牌最高"，所以战功看起来只有一半。
+     ⚠ 演武场 / 调试模式【绝对不能】写这个数：木桩血量上百万，
+       一旦记进去，返回开始界面再开局，木桩伤害就会被当成战功发出去。 */
+  if (!noSave() && acc > (S.runBestHit || 0)) S.runBestHit = acc;
 
   const btnEnd = $('btnAttack');
   if (btnEnd) { btnEnd.textContent = '出 击'; btnEnd.classList.remove('skip'); }
@@ -5572,6 +5582,7 @@ function saveGame() {
       enemy: S.enemy,
       runDmg: S.runDmg,      // 中途刷新后接着玩，本局总伤不会丢
       runBestHit: S.runBestHit,
+      expAwarded: S.expAwarded,   // 重排后已领过的部分，恢复时要记住，否则会重复计
       recHero: S.recHero,
       recWeapon: S.recWeapon,
     }));
@@ -5599,7 +5610,7 @@ function loadGame() {
     S.runBestHit = d.runBestHit || 0;
     S.recHero = d.recHero || 0;
     S.recWeapon = d.recWeapon || 0;
-    S.expAwarded = 0;          // 存档是在结算前写的，所以这局还没领过战功
+    S.expAwarded = d.expAwarded || 0;   // 重排后已领过战功的话，这里不能清零，否则会重复计
     S.phase = 'prep';
     return true;
   } catch (e) {
@@ -5831,7 +5842,8 @@ function openLevelCard() {
       '<div class="lv-next">' + nextTxt + '</div>' +
     '</div>' +
     '<div class="lv-how">' +
-      '每局<b>战败</b>时，把本局打出的<b>最高单波总伤害</b>计入战功（只补新纪录，<b>累计不清零</b>）。<br>' +
+      '每局<b>结束</b>时，把本局打出的<b>最高单波总伤害</b>计入战功（只补新纪录，<b>累计不清零</b>）。<br>' +
+      '打不过直接重开也算 —— <b>开新局时会自动结算上一局</b>。<br>' +
       '单局最高单波 <b>' + fmtNum(m.stats.bestRunHit || 0) + '</b>　·　' +
       '单局最高总伤 <b>' + fmtNum(m.stats.bestRunDmg || 0) + '</b>　·　' +
       '累计 <b>' + (m.stats.runs || 0) + '</b> 局' +
@@ -5996,8 +6008,26 @@ $('uiLevel').addEventListener('click', openLevelCard);
 $('btnStart').addEventListener('click', () => {
   SFX.powerUp();
   hideStartScreen();
+  /* 刷新过页面的话，内存里的这一局没了，但存档还在 → 先取回来，下面是结算才能生效 */
+  try {
+    if (!(S.runBestHit > 0)) {
+      const d = JSON.parse(lsGet(SAVE_KEY) || 'null');
+      if (d) {
+        S.runBestHit = d.runBestHit || 0;
+        S.expAwarded = d.expAwarded || 0;
+        S.runDmg = Math.max(S.runDmg || 0, d.runDmg || 0);
+      }
+    }
+  } catch (e) {}
   clearSave();
+  /* "一看打不过就直接重开"是最常见的结束方式 —— 这里补一次结算，别让上一局白打 */
+  let prevGain = null;
+  try { prevGain = awardRunExp(); } catch (e) {}
   startRun();
+  if (prevGain && prevGain.gain > 0) {
+    setTimeout(() => toast('上一局战功已结算　+' + prevGain.gain +
+      (prevGain.leveled ? '　→ ' + prevGain.after.title : '')), 700);
+  }
   if (!lsGet('sg_tut_done')) openTutorial(0);
   else if (!lsGet('sg_guide_done')) setTimeout(() => startGuide(0), 500);
 });
@@ -6806,6 +6836,11 @@ function purgeSandboxState() {
   S.retryCount = 0;
   S.overflowPaid = 0;
   S.rwd = { noHero: 0, recent: [] };
+  /* ⚠ 这三行是 v1.0.6 补的：木桩的伤害数字绝不能带出沙盒。
+     漏掉 runBestHit 的后果 = 返回开始界面再开局，木桩伤害会被结算成战功（玩家实战报过）。 */
+  S.runBestHit = 0;
+  S.runDmg = 0;
+  S.expAwarded = 0;
   _selSlot = null;
 }
 
